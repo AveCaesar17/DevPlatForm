@@ -1,0 +1,162 @@
+
+- name: install openvpn Debian
+  apt:
+    name: "{{ item }}"
+    state: latest
+    update_cache: yes
+  loop:
+    - openvpn
+    - easy-rsa
+  vars:
+    ansible_become: yes
+  when: ansible_os_family == "Debian"
+- name: install openvpn RedHat
+  yum:
+    name: "{{ item }}"
+    state: latest
+    update_cache: yes
+  loop:
+    - openvpn
+    - easy-rsa
+  vars:
+    ansible_become: yes
+  when: ansible_os_family == "RedHat"
+  
+
+- name: create CA dir 
+  file:
+    path: /etc/openvpn/easy-rsa/server
+    state: directory
+- name: copy certs
+  shell: 
+    cmd: cp -R /usr/share/easy-rsa /etc/openvpn/
+  vars: 
+    ansible_become: yes
+- name: Run init-pki
+  shell:
+    cmd: "/etc/openvpn/easy-rsa/easyrsa init-pki"
+    chdir: /etc/openvpn/easy-rsa
+    creates: /etc/openvpn/easy-rsa/pki
+  
+  vars: 
+    ansible_become: yes
+
+- name: Run build-ca
+  shell:
+    cmd: "/etc/openvpn/easy-rsa/easyrsa build-ca nopass"
+    chdir: /etc/openvpn/easy-rsa
+    creates: /etc/openvpn/easy-rsa/pki/ca.crt
+  environment:
+    EASYRSA_BATCH: "yes"
+  
+  vars: 
+    ansible_become: yes
+- name: Run gen-dh
+  shell:
+    cmd: "/etc/openvpn/easy-rsa/easyrsa gen-dh"
+    chdir: /etc/openvpn/easy-rsa
+    creates: /etc/openvpn/easy-rsa/pki/dh.pem
+  
+  vars: 
+    ansible_become: yes
+- name: Easyrsa build-server-full server nopass
+  shell:
+    cmd: "/etc/openvpn/easy-rsa/easyrsa build-server-full server nopass"
+    chdir: /etc/openvpn/easy-rsa
+    creates: /etc/openvpn/easy-rsa/pki/issued/server.crt
+- name: Easyrsa build-client-full client nopass
+  shell:
+    cmd: "/etc/openvpn/easy-rsa/easyrsa build-client-full client nopass"
+    chdir: /etc/openvpn/easy-rsa
+    creates: /etc/openvpn/easy-rsa/pki/issued/client.crt
+- name: Run gen-crl
+  shell:
+    cmd: "/etc/openvpn/easy-rsa/easyrsa gen-crl"
+    chdir: /etc/openvpn/easy-rsa
+    creates: /etc/openvpn/easy-rsa/pki/crl.pem
+  
+  vars: 
+    ansible_become: yes
+- name: Create CA 
+  shell: 
+    cmd: "openvpn --genkey --secret /etc/openvpn/easy-rsa/pki/ta.key"
+    creates: /etc/openvpn/easy-rsa/pki/ta.key
+    
+
+  vars: 
+    ansible_become: yes
+- name: Create certs
+  shell: 
+    cmd: "cp {{ item.src }} {{ item.dist }}"
+    chdir: /etc/openvpn/easy-rsa/
+  loop:
+      - { 
+          src: './pki/ca.crt' ,
+          dist: '/etc/openvpn/server/ca.crt'
+        }
+      - { 
+          src: 'pki/dh.pem' ,
+          dist: '/etc/openvpn/server/dh.pem'
+        }
+      - { 
+          src: './pki/crl.pem' ,
+          dist: '/etc/openvpn/server/crl.pem'
+        }
+      - { 
+          src: './pki/ta.key' ,
+          dist: '/etc/openvpn/server/ta.key'
+        }
+      - { 
+          src: './pki/issued/server.crt' ,
+          dist: '/etc/openvpn/server/server.crt'
+        }
+      - { 
+          src: './pki/issued/client.crt' ,
+          dist: '/etc/openvpn/server/client.crt'
+        }
+      - { 
+          src: './pki/private/server.key' ,
+          dist: '/etc/openvpn/server/server.key'
+        }
+      - { 
+          src: './pki/ta.key' ,
+          dist: '/etc/openvpn/ta.key'
+        }
+      - { 
+          src: './pki/private/ca.key' ,
+          dist: '/etc/openvpn/ca.key'
+        }
+      - { 
+          src: './pki/private/client.key' ,
+          dist: '/etc/openvpn/client.key'
+        }
+      - { 
+          src: './pki/private/server.key' ,
+          dist: '/etc/openvpn/server.key'
+        }
+      
+- name: Create conf
+  template: 
+    src: server.conf.j2
+    dest: /etc/openvpn/server.conf
+- name: Enable a timer unit for dnf-automatic
+  systemd:
+    name: openvpn@server
+    state: restarted
+    enabled: yes
+- name: conf forwarding
+  shell:
+    cmd: "{{ item }}"
+  loop:
+    - sysctl -w net.ipv4.ip_forward=1
+    - iptables -I FORWARD -i tun0 -o ens3 -j ACCEPT
+    - iptables -I FORWARD -i ens3 -o tun0 -j ACCEPT
+    - iptables -t nat -A POSTROUTING -o ens3 -j MASQUERADE
+  vars:
+    ansible_become: yes
+
+- name: create vpn 
+  include_tasks: create_client.yml
+  when: client_users is defined
+ 
+  

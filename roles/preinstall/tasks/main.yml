@@ -1,0 +1,8 @@
+- name: Run preinstall Debian
+  include_tasks: preinstall_debian.yml
+  when: ansible_os_family == "Debian"
+
+
+- name: Run preinstall RedHat
+  include_tasks: preinstall_redhat.yml
+  when: ansible_os_family == "RedHat"

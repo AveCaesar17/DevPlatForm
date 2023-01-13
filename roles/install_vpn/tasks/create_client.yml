@@ -1,0 +1,46 @@
+- name: Create certs
+  shell:
+    cmd: ./easyrsa build-client-full {{ item }} nopass
+    chdir: /etc/openvpn/easy-rsa/
+  loop: "{{ client_users }}"
+#- name: Config client
+- name: Creates directory
+  file:
+      path: /etc/openvpn/clients/{{ item }}
+      state: directory
+  loop: "{{ client_users }}"
+- name: Copy server certs
+  shell: 
+    cmd: "cp /etc/openvpn/easy-rsa/pki/ca.crt /etc/openvpn/clients/{{ item }}/ca.crt | cp /etc/openvpn/easy-rsa/pki/ta.key /etc/openvpn/clients/{{ item }}/ta.key "
+  loop: "{{  client_users }}"
+  vars: 
+    ansible_become: yes
+- name: Copy client certs
+  shell:
+    cmd: "cp /etc/openvpn/easy-rsa/pki/issued/{{ item }}.crt /etc/openvpn/clients/{{ item }}/{{ item }}.crt | cp /etc/openvpn/easy-rsa/pki/private/{{ item }}.key /etc/openvpn/clients/{{ item }}/{{ item }}.key"
+  loop: "{{  client_users }}"
+  vars: 
+    ansible_become: yes
+- name: Create client.conf  
+  template: 
+      src: client.conf.j2
+      dest: /etc/openvpn/clients/{{ item }}/{{ item }}.conf
+  loop: "{{ client_users }}"
+  vars: 
+     client_name: "{{ item }}"
+     ansible_become: yes
+
+- name: Create arhive
+  community.general.archive:
+    path: /etc/openvpn/clients/{{ item }}
+    dest: /etc/openvpn/clients/{{ item }}.tgz
+  loop: "{{ client_users }}"
+  vars: 
+    ansible_become: yes
+- name: Copy arhive to localhost 
+  fetch: 
+    src: /etc/openvpn/clients/{{ item }}.tgz
+    dest: ./clients_openvpn/
+  loop: "{{ client_users }}"
+  vars: 
+    ansible_become: yes

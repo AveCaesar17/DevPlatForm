@@ -1,0 +1,48 @@
+version: '2'
+services:
+
+    nginx:
+   
+        image: umputun/nginx-le:latest
+        hostname: nginx
+        restart: always
+        container_name: nginx
+
+        logging:
+          driver: json-file
+          options:
+              max-size: "10m"
+              max-file: "5"
+
+        volumes:
+            - ./ssl:/etc/nginx/ssl
+            - ./conf/nginx.conf:/etc/nginx/service.conf
+            # - ./etc/service-example-2.conf:/etc/nginx/service2.conf # more services, should be service*.conf
+            # - ./etc/stream-example-2.conf:/etc/nginx/stream2.conf # more streams, should be stream*.conf
+            # - ./etc/conf.d:/etc/nginx/conf.d-le # configuration folder, all files from it will be added
+            # - ./etc/stream.conf:/etc/nginx/stream.conf.d-le # streams configuration folder, all files from it will be added
+        ports:
+            - "80:80"
+            - "443:443"
+
+        environment:
+            - TZ={{ timezone }}
+            - LETSENCRYPT=true
+            - LE_EMAIL={{ email }}
+            - LE_FQDN={{ domen }}
+    onedev:
+        image: 1dev/server
+        hostname: onedev
+        restart: always
+        container_name: onedev
+        
+        
+        volumes:
+            - /home/{{ ansible_user }}/onedev/state:/opt/onedev
+            - {{ sock_docker }}:/var/run/docker.sock
+        environment:
+            - initial_user={{ username }}
+            - initial_password={{ password }}
+            - initial_email={{ email }}
+            - initial_server_url=https://{{ domen }}
+   

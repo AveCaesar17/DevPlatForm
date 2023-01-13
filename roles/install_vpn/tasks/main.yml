@@ -1,0 +1,3 @@
+- name: create vpn 
+  include_tasks: install_vpn.yml
+  when: inventory_hostname in groups['vpn']

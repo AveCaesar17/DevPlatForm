@@ -1,0 +1,19 @@
+[all]
+host1 ansible_host=213.226.100.158 ansible_user=root
+host2 ansible_host=213.226.100.158 ansible_user=root
+host3 ansible_host=213.226.100.158 ansible_user=root
+agent1 ansible_host=213.226.100.158 ansible_user=root
+[onedev]
+host1
+[onedev_agents]
+agent1
+host1
+[vault]
+host2
+[vpn]
+host3
+[defectdojo]
+host3 
+
+
+

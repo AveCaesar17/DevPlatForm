@@ -1,0 +1,8 @@
+FROM 1dev/agent:{{ version_agent }}
+
+WORKDIR /
+
+RUN /bin/bash "curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin"
+
+
+CMD ["/agent/boot/wrapper-linux-x86-64","/agent/conf/wrapper.conf"]

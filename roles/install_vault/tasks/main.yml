@@ -1,0 +1,30 @@
+- block: 
+  - name: Creates directory
+    file:
+      path: "{{ item }}"
+      state: directory
+    with_items:
+      - "/home/{{ ansible_user }}/Vault-Consul-Docker"
+      - "/home/{{ ansible_user }}/Vault-Consul-Docker/vault"
+      - "/home/{{ ansible_user }}/Vault-Consul-Docker/vault/config"
+      - "/home/{{ ansible_user }}/Vault-Consul-Docker/vault/data"
+      - "/home/{{ ansible_user }}/Vault-Consul-Docker/vault/logs"
+      - "/home/{{ ansible_user }}/Vault-Consul-Docker/vault/policies"
+  - name: copy config files
+    template: 
+        src: "{{ item.name }}"
+        dest: "{{ item.dest }}"
+    loop:
+        - { name: 'Dockerfile.j2' ,
+            dest: '/home/{{ ansible_user }}/Vault-Consul-Docker/vault/Dockerfile' 
+          }
+        - { name: 'docker-compose.yaml.j2' ,
+            dest: '/home/{{ ansible_user }}/Vault-Consul-Docker/docker-compose.yaml' 
+          }
+        - { name: 'vault-config.json.j2' ,
+            dest: '/home/{{ ansible_user }}/Vault-Consul-Docker/vault/config/vault-config.json' 
+          }
+  - name: Start Vault
+    shell: 
+      cmd: docker-compose -f /home/{{ ansible_user }}/Vault-Consul-Docker/docker-compose.yaml up --build -d
+  when: inventory_hostname in groups['vault']

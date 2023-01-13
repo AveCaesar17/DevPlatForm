@@ -1,0 +1,53 @@
+- name: Create token
+  uri:
+    url: https://{{ domen }}/~api/agent-tokens
+    user: "{{ username }}"
+    password: "{{ password }}"
+    method: POST
+    body:
+      value: "{{ 99999999 | random | to_uuid }}"
+    force_basic_auth: yes
+    status_code: 200
+    body_format: json
+  register: id
+- name: echo
+  debug:
+    msg:
+      - "{{ id.json }}"
+- name: get token 
+  uri:
+    url: https://{{ domen }}/~api/agent-tokens/{{ id.json }}
+    user: "{{ username }}"
+    password: "{{ password }}"
+    method: GET
+    force_basic_auth: yes
+    status_code: 200
+  register: token
+
+- name: echo
+  debug:
+    msg:
+      - "{{ token.json.value }}"
+- name: Creates directory
+  file:
+      path: "{{ item }}"
+      state: directory
+  with_items:
+      - "/home/{{ ansible_user }}/agent/{{ inventory_hostname }}"
+- name: Create client.conf  
+  template: 
+      src: agent.dokcerfile.j2
+      dest: /home/{{ ansible_user }}/agent/{{ inventory_hostname }}/Dockerfile
+- name: Build docker 
+  shell:
+    cmd: docker build -t {{ inventory_hostname }} .
+    chdir: /home/{{ ansible_user }}/agent/{{ inventory_hostname }}
+- name: Run agent
+  shell:
+    cmd: docker run -t -v /var/run/docker.sock:/var/run/docker.sock -d -v $(pwd)/agent/work:/agent/work -e serverUrl=https://{{ domen }} -e agentToken={{ token.json.value }} -h {{ inventory_hostname }} {{ inventory_hostname }}
+    chdir: /home/{{ ansible_user }}/agent/{{ inventory_hostname }}
+  register: container
+- name: echo
+  debug:
+    msg:
+      - "{{ container.stdout }}"

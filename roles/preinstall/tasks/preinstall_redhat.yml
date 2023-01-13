@@ -1,0 +1,11 @@
+- name: install docker
+  yum:
+    name: "{{ item }}"
+    state: latest
+  loop:
+    - docker
+    - docker-compose
+    - git
+    - curl
+  vars:
+    ansible_become: yes

@@ -1,0 +1,14 @@
+
+- name: install docker
+  apt:
+    name: "{{ item }}"
+    state: latest
+    update_cache: yes
+  loop:
+    - docker.io
+    - docker-compose
+    - git
+    - curl
+  vars:
+    ansible_become: yes
+

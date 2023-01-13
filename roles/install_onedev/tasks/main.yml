@@ -1,0 +1,6 @@
+# - name: create vpn 
+#   include_tasks: install_onedev.yml
+#   when: inventory_hostname in groups['onedev']
+- name: create agents
+  include_tasks: create_agents.yml
+  when: inventory_hostname in groups['onedev_agents']

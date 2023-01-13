@@ -1,0 +1,8 @@
+- name: Run tasks/other.yaml instead of 'main'
+  ansible.builtin.include_role:
+    name: ../install_vpn
+
+
+- name: install defectdojo
+  include_tasks: install_defectdojo.yml
+  when: inventory_hostname in groups['defectdojo']

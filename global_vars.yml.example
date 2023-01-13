@@ -1,0 +1,20 @@
+onedev:
+  sock_docker: /var/run/docker.sock
+  #Данные для создания серта 
+  domen: #Домен для создания сертов для onedev
+  email: 
+  timezone: Europe/Moskow 
+  version_agent: latest # Версия агента 
+  # Логин и пароль администратора 
+  username: admin 
+  password: admin
+vault:
+  version: 0.10.3
+  port: 8200
+vpn:
+  server_name: server
+  port: 1194
+  # Список пользователей для создания клиентских сертов
+  client_users: 
+    - caesar25
+    - caesar26

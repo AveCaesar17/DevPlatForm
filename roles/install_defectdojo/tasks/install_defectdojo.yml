@@ -1,0 +1,47 @@
+- name: Install git deb 
+  apt:
+    name: git
+    state: latest
+    update_cache: yes
+  vars:
+    ansible_become: yes
+  when: ansible_os_family == "Debian" 
+- name: Install git rpm 
+  yum:
+    name: git
+    state: latest
+    update_cache: yes
+  vars:
+    ansible_become: yes
+  when: ansible_os_family == "RedHat" 
+
+- name: Git checkout
+  ansible.builtin.git:
+    repo: 'https://github.com/DefectDojo/django-DefectDojo.git'
+    dest: /home/{{ ansible_user }}/django-DefectDojo
+- name: find
+  lineinfile: 
+    dest: /etc/passwd
+    line: "user"
+  check_mode: yes
+  register: presence
+  failed_when: presence.changed
+- name: Get creds
+  debug:
+    msg:
+      - "{{ presence }}"
+- name: Build and Run
+  shell:
+    cmd: "{{ item }}"
+    chdir: /home/{{ ansible_user }}/django-DefectDojo
+  loop:
+    - ./dc-build.sh
+    - ./dc-up.sh mysql-rabbitmq
+- name: Obtain admin creads
+  shell:
+    cmd: docker-compose logs initializer | grep "Admin password:"
+  register: creds
+- name: Get creds
+  debug:
+    msg:
+      - "{{ creds.stdout }}"
