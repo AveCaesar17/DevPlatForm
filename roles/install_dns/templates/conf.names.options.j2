@@ -1,0 +1,15 @@
+options {
+        dnssec-enable yes;
+        dnssec-validation auto;
+        dnssec-lookaside auto;
+        directory "/var/cache/bind";
+        version "not currently available";
+        recursion yes;
+        allow-recursion { any; };
+        forwarders { 8.8.8.8; 8.8.4.4; };
+
+
+
+
+        listen-on-v6 { any; };
+};

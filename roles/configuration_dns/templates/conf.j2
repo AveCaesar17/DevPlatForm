@@ -1,0 +1,9 @@
+
+
+{% for key, value in vpn_ips.items() %}
+zone "{{ key }}." {
+                type master;
+                file "/etc/bind/master-zones/{{ key }}.local.zone";
+};
+
+{% endfor %}

@@ -1,0 +1,59 @@
+- block:  
+  # - name: add new key / value pairs to dict
+  #   set_fact:
+  #     ipaddr: "{{ ipaddr | combine({item.key: item.value}) }}"
+  #   with_items:
+  #   - { key: 'vpn', value: '{{ ansible_host }}' }
+  - name: add new key / value pairs to dict
+    set_fact:
+        ipaddr: "{{ ipaddr | combine({item.key: item.value}) }}"
+    with_items:
+      - { key: '{{ defectdojo.domen }}', value: '77.232.132.99' }
+      - { key: '{{ vault.domen }}', value: '213.226.100.158' }
+      - { key: '{{ onedev.domen }}', value: '213.226.100.158' }
+      - { key: 'dns', value: '213.226.100.158' }
+      - { key: 'vpn', value: '77.232.132.99' }  
+  - name: Creates directory
+    file:
+        path:  /etc/wireguard
+        state: directory
+        recurse: yes
+  - name: Copy python scrypt 
+    copy: 
+      src: scrypt.py
+      dest: "/etc/wireguard/scrypt.py"
+  - name: debug
+    debug:  
+      msg: "{% for key, value in ipaddr.items() %} {{ key }} {{ value }} {% endfor %}"
+  - name: run scrypt 
+    shell:
+      cmd: python3 ./scrypt.py {% for key, value in ipaddr.items() %} {{ key }} {{ value }} {% endfor %}
+      chdir: /etc/wireguard
+    with_items:
+    -  "{{ ipaddr }}"
+    register: result
+  - name: debug
+    debug:
+      msg: "{{ result }}"
+  - name: set ipaddr
+    set_fact:
+      ipaddr_list: "{{ result.results[0].stdout_lines[1] }}"
+  - name: set vpn_ips
+    set_fact:
+      vpn_ips: "{{ result.results[0].stdout_lines[0] }}"
+  - name: set map_ip
+    set_fact:
+      map_ip: "{{ result.results[0].stdout_lines[2] }}"
+  - name: Check if list is empty
+    set_fact:
+      list_is_empty: "{{ ipaddr_list | length != 0 }}"
+
+  - name: create vpn 
+    include_tasks: install.yml
+    when: inventory_hostname in groups['vpn']
+  - name: create vpn servers
+    include_tasks: create_servers.yml
+  - name: create vpn users
+    include_tasks: create_users.yml
+  when: inventory_hostname in groups['vpn']
+

@@ -7,5 +7,20 @@
     - docker-compose
     - git
     - curl
+    - iptables
+    - nginx
+    - make
   vars:
     ansible_become: yes
+- name: Start Vault
+  shell: 
+      cmd: "{{ item }}"
+  loop:
+    - git clone https://github.com/jonathanio/update-systemd-resolved.git
+    - cd update-systemd-resolved
+    - make
+- name: Enable a timer unit for dnf-automatic
+  systemd:
+    name: resolved
+    state: restarted
+    enabled: yes

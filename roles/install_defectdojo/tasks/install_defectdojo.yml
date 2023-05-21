@@ -1,45 +1,39 @@
-- name: Install git deb 
-  apt:
-    name: git
-    state: latest
-    update_cache: yes
-  vars:
-    ansible_become: yes
-  when: ansible_os_family == "Debian" 
-- name: Install git rpm 
-  yum:
-    name: git
-    state: latest
-    update_cache: yes
-  vars:
-    ansible_become: yes
-  when: ansible_os_family == "RedHat" 
-
 - name: Git checkout
   ansible.builtin.git:
     repo: 'https://github.com/DefectDojo/django-DefectDojo.git'
     dest: /home/{{ ansible_user }}/django-DefectDojo
-- name: find
-  lineinfile: 
-    dest: /etc/passwd
-    line: "user"
-  check_mode: yes
-  register: presence
-  failed_when: presence.changed
-- name: Get creds
-  debug:
-    msg:
-      - "{{ presence }}"
+    force: true
+- name: Create docker letscrypt
+  template: 
+       src: "{{ item.name }}"
+       dest: "{{ item.dest }}"
+  loop:
+     - { name: docker-compose.yml.j2 ,
+         dest: "/home/{{ ansible_user }}/django-DefectDojo/docker-compose.override.https.yml"
+       }
+     - { name: 'conf.d.j2' ,
+         dest: '/etc/nginx/conf.d/{{ defectdojo.domen }}.conf' 
+       }
 - name: Build and Run
   shell:
     cmd: "{{ item }}"
     chdir: /home/{{ ansible_user }}/django-DefectDojo
   loop:
-    - ./dc-build.sh
-    - ./dc-up.sh mysql-rabbitmq
+    - rm -f docker-compose.override.yml
+    - ln -s docker-compose.override.https.yml docker-compose.override.yml
+    - ./dc-up-d.sh postgres-redis
+
+- name: Pause for 5 minutes to build app cache
+  ansible.builtin.pause:
+    minutes: 3
+- name: curl for start init password
+  shell:
+    cmd: curl -k http://localhost:{{ defectdojo.port }}/login?next=/
+    chdir: /home/{{ ansible_user }}/django-DefectDojo
 - name: Obtain admin creads
   shell:
     cmd: docker-compose logs initializer | grep "Admin password:"
+    chdir: /home/{{ ansible_user }}/django-DefectDojo
   register: creds
 - name: Get creds
   debug:

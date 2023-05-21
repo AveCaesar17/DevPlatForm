@@ -1,0 +1,63 @@
+
+- block:
+
+#   when: inventory_hostname in groups['dns']
+    - name: Creates directory
+      file:
+        path:  /home/{{ ansible_user }}/dns
+        state: directory
+    - name: copy docker-compose
+      template:
+        src: "{{ item.name }}"
+        dest: "{{ item.dest }}"
+      loop:
+        - { name: docker-compose.yml.j2,
+            dest: "/home/{{ ansible_user }}/dns/docker-compose.yml"
+          }
+    - name: run bind 
+      shell:
+        cmd: docker-compose up --build -d
+        chdir: /home/{{ ansible_user }}/dns
+    - name: Creates directory
+      file:
+        path:  /home/{{ ansible_user }}/dns/bind9/bind/etc/master-zones
+        state: directory
+        recurse: yes
+    - name: copy docker-compose
+      template:
+        src: "{{ item.name }}"
+        dest: "{{ item.dest }}"
+      loop:
+        - { name: vault.avecaesar.ru.local.zone.j2 ,
+            dest: "/home/{{ ansible_user }}/dns/bind9/bind/etc/master-zones/vault.avecaesar.ru.local.zone"
+          }
+        - { name: named.conf.local.j2 ,
+            dest: "/home/{{ ansible_user }}/dns/bind9/bind/etc/named.conf.local"
+          }
+        - { name: resolved.conf.j2,
+            dest: /etc/systemd/resolved.conf
+          }
+    
+    - name: restart bind 
+      shell:
+        cmd: "{{ item }}"
+        chdir: /home/{{ ansible_user }}/dns
+      loop:
+        - ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf
+        - systemctl restart systemd-resolved
+    - name: Reboot a slow machine that might have lots of updates to apply
+      ansible.builtin.reboot:
+        reboot_timeout: 3600
+    - name: restart bind 
+      shell:
+        cmd: docker-compose restart
+        chdir: /home/{{ ansible_user }}/dns
+        
+    - name: add new key / value pairs to dict
+      set_fact:
+        ipaddr: "{{ ipaddr | combine({item.key: item.value}) }}"
+      with_items:
+      - { key: 'dns', value: '{{ ansible_host }}' }
+      delegate_to: "{{ groups['vpn'][0] }}"
+      run_once: true
+  when: inventory_hostname in groups['dns']

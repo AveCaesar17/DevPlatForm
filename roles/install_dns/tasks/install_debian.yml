@@ -1,0 +1,51 @@
+- name: install 
+  yum:
+    name: "{{ item }}"
+    state: latest
+  loop:
+    - chrony
+    - bind9
+
+  vars:
+    ansible_become: yes
+- name: Creates directory
+  file:
+      path: "{{ item }}"
+      state: directory
+      mode: "{{ item.mode }}"
+      owner: "{{ item.owner }}"
+      group: "{{ item.group }}"
+  loop:
+      - {
+          path: "/var/bind" ,
+          mode: "1770",
+          owner: "dns",
+          group: "dns"
+        }
+      - {
+          path: "/etc/bind",
+          mode: "0775",
+          owner: "root",
+          group: "root"
+      
+        }
+- name: Create group
+  group:
+    name: dns
+    state: present
+
+- name: Create user
+  user:
+    name: dns
+    state: present
+    system: yes
+- name: Generate rndc key
+  shell:
+    cmd: rndc-confgen -a -c "/etc/bind/rndc.key"
+    creates: "/etc/bind/rndc.key"
+- name: Redact permission
+  file:
+    path: /etc/bind/rndc.key
+    owner: "dns"
+    group: "dns"
+    mode: "0640"

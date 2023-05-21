@@ -1,27 +1,29 @@
 
-- name: install openvpn Debian
-  apt:
-    name: "{{ item }}"
-    state: latest
-    update_cache: yes
-  loop:
-    - openvpn
-    - easy-rsa
-  vars:
-    ansible_become: yes
-  when: ansible_os_family == "Debian"
-- name: install openvpn RedHat
-  yum:
-    name: "{{ item }}"
-    state: latest
-    update_cache: yes
-  loop:
-    - openvpn
-    - easy-rsa
-  vars:
-    ansible_become: yes
-  when: ansible_os_family == "RedHat"
-  
+# - name: install openvpn Debian
+#   apt:
+#     name: "{{ item }}"
+#     state: latest
+#     update_cache: yes
+#   loop:
+#     - openvpn
+#     - easy-rsa
+#   vars:
+#     ansible_become: yes
+#   when: ansible_os_family == "Debian"
+# - name: install openvpn RedHat
+#   yum:
+#     name: "{{ item }}"
+#     state: latest
+#     update_cache: yes
+#   loop:
+#     - openvpn
+#     - easy-rsa
+#   vars:
+#     ansible_become: yes
+#   when: ansible_os_family == "RedHat"
+- name: add new key / value pairs to dict
+  set_fact:
+    ipaddr: {}
 
 - name: create CA dir 
   file:
@@ -92,31 +94,31 @@
   loop:
       - { 
           src: './pki/ca.crt' ,
-          dist: '/etc/openvpn/server/ca.crt'
+          dist: '/etc/openvpn/ca.crt'
         }
       - { 
           src: 'pki/dh.pem' ,
-          dist: '/etc/openvpn/server/dh.pem'
+          dist: '/etc/openvpn/dh.pem'
         }
       - { 
           src: './pki/crl.pem' ,
-          dist: '/etc/openvpn/server/crl.pem'
+          dist: '/etc/openvpn/crl.pem'
         }
       - { 
           src: './pki/ta.key' ,
-          dist: '/etc/openvpn/server/ta.key'
+          dist: '/etc/openvpn/ta.key'
         }
       - { 
           src: './pki/issued/server.crt' ,
-          dist: '/etc/openvpn/server/server.crt'
+          dist: '/etc/openvpn/server.crt'
         }
       - { 
           src: './pki/issued/client.crt' ,
-          dist: '/etc/openvpn/server/client.crt'
+          dist: '/etc/openvpn/client.crt'
         }
       - { 
           src: './pki/private/server.key' ,
-          dist: '/etc/openvpn/server/server.key'
+          dist: '/etc/openvpn/server.key'
         }
       - { 
           src: './pki/ta.key' ,
@@ -149,14 +151,19 @@
     cmd: "{{ item }}"
   loop:
     - sysctl -w net.ipv4.ip_forward=1
-    - iptables -I FORWARD -i tun0 -o ens3 -j ACCEPT
-    - iptables -I FORWARD -i ens3 -o tun0 -j ACCEPT
+    - iptables -I FORWARD -i tap0 -o ens3 -j ACCEPT
+    - iptables -I FORWARD -i ens3 -o tap0 -j ACCEPT
     - iptables -t nat -A POSTROUTING -o ens3 -j MASQUERADE
+    - iptables -A FORWARD -s 10.8.0.0/24 -d 10.8.0.0/24 -j ACCEPT
+    - iptables-save
   vars:
     ansible_become: yes
 
-- name: create vpn 
-  include_tasks: create_client.yml
-  when: client_users is defined
- 
+- name: add new key / value pairs to dict
+  set_fact:
+    ipaddr: "{{ ipaddr | combine({item.key: item.value}) }}"
+  with_items:
+  - { key: 'vpn', value: '{{ ansible_host }}' }
+  delegate_to: "{{ groups['vpn'][0] }}"
+  run_once: true
   

@@ -1,0 +1,56 @@
+
+
+  - name: Creates directory
+    file:
+      path: "{{ item }}"
+      state: directory
+    with_items:
+      - "/home/{{ ansible_user }}/Vault-Consul-Docker"
+      - "/home/{{ ansible_user }}/Vault-Consul-Docker/vault"
+      - "/home/{{ ansible_user }}/Vault-Consul-Docker/vault/config"
+      - "/home/{{ ansible_user }}/Vault-Consul-Docker/vault/data"
+      - "/home/{{ ansible_user }}/Vault-Consul-Docker/vault/logs"
+      - "/home/{{ ansible_user }}/Vault-Consul-Docker/vault/policies"
+  - name: copy config files
+    template: 
+        src: "{{ item.name }}"
+        dest: "{{ item.dest }}"
+    loop:
+        - { name: 'Dockerfile.j2' ,
+            dest: '/home/{{ ansible_user }}/Vault-Consul-Docker/vault/Dockerfile' 
+          }
+        - { name: 'docker-compose.yaml.j2' ,
+            dest: '/home/{{ ansible_user }}/Vault-Consul-Docker/docker-compose.yaml' 
+          }
+        - { name: 'vault-config.json.j2' ,
+            dest: '/home/{{ ansible_user }}/Vault-Consul-Docker/vault/config/vault-config.json' 
+          }
+
+        - { name: 'nginx.conf.j2' ,
+            dest: '/etc/nginx/conf.d/{{ vault.domen }}.conf_ssl' 
+          }
+        - { name: 'conf.d.j2' ,
+            dest: '/etc/nginx/conf.d/{{ vault.domen }}.conf' 
+          }
+  - name: Start Vault
+    shell: 
+      cmd: docker-compose -f /home/{{ ansible_user }}/Vault-Consul-Docker/docker-compose.yaml up --build -d
+  - name: Start certbot
+    shell:
+      cmd: "{{ item }}"
+    loop:
+      - nginx -t && nginx -s reload
+      - certbot --nginx -d {{ vault.domen }} -m {{ vault.email }} --non-interactive --agree-tos
+  # - name: Replace old hostname with new hostname (requires Ansible >= 2.4)
+  #   ansible.builtin.replace:
+  #     path: /etc/nginx/conf.d/{{ vault.domen }}.conf
+  #     regexp: '}'
+  #     replace: 'include /etc/nginx/conf.d/{{ vault.domen }}.conf_ssl; }\'
+  - name: re
+    shell:
+      cmd: "sed -i '1,13 s#}#include /etc/nginx/conf.d/{{ vault.domen }}.conf_ssl; }#' /etc/nginx/conf.d/{{ vault.domen }}.conf"
+  - name: Enable service httpd and ensure it is not masked
+    ansible.builtin.systemd:
+      name: nginx
+      enabled: yes  
+      state: restarted

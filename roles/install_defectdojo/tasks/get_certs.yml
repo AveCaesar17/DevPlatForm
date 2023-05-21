@@ -1,0 +1,42 @@
+- name: Creates directory
+  file:
+    path: "{{ item }}"
+    state: directory
+  with_items:
+    - "/home/{{ ansible_user }}/django-DefectDojo/letscrypt"
+    - "/home/{{ ansible_user }}/django-DefectDojo/letscrypt/conf/"
+- name: Create docker letscrypt
+  template: 
+      src: "{{ item.name }}"
+      dest: "{{ item.dist }}"
+  loop:
+    - { name: docker-compose.yml.j2 ,
+        dist: "/home/{{ ansible_user }}/django-DefectDojo/letscrypt/docker-compose.yml"
+      }
+    - { name: nginx.conf.j2 ,
+        dist: "/home/{{ ansible_user }}/django-DefectDojo/letscrypt/conf/nginx.conf"
+      }
+- name: Run letscrypt
+  shell:
+    cmd: docker-compose up --build -d
+    chdir: "/home/{{ ansible_user }}/django-DefectDojo/letscrypt"
+- name: Pause for 5 minutes to build app cache
+  ansible.builtin.pause:
+    minutes: 2
+- name: Run letscrypt
+  shell:
+    cmd: "{{ item }}"
+    chdir: "/home/{{ ansible_user }}/django-DefectDojo/letscrypt"
+  loop:
+    - docker-compose down
+    - docker-compose rm -f 
+
+
+- name: Rename certs
+  shell:
+    cmd: "{{ item }}"
+    chdir: "/home/{{ ansible_user }}/django-DefectDojo/docker/certs"
+  loop:
+    - cp le-crt.pem nginx.crt
+    - cp le-key.pem nginx.key
+

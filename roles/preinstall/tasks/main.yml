@@ -1,3 +1,14 @@
+- name: Creates directory
+  file:
+      path: "{{ item }}"
+      state: directory
+  with_items:
+      - "/etc/nginx/conf.d/"
+- name: copy 
+  template: 
+      src: nginx.conf.j2
+      dest: /etc/nginx/nginx.conf
+  when: inventory_hostname in groups['vault'] or inventory_hostname in groups['onedev'] or inventory_hostname in groups['defectdojo']
 - name: Run preinstall Debian
   include_tasks: preinstall_debian.yml
   when: ansible_os_family == "Debian"
@@ -6,3 +17,6 @@
 - name: Run preinstall RedHat
   include_tasks: preinstall_redhat.yml
   when: ansible_os_family == "RedHat"
+- name: ls
+  set_fact: 
+      ipaddr: {}

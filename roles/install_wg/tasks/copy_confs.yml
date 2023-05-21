@@ -1,0 +1,33 @@
+  - name: Creates directory
+    file:
+      path: "/etc/wireguard/"
+      state: directory
+  - name: copy certs 
+    copy: 
+      src: "../../../clients_wg/{{ groups['vpn'][0] }}/etc/openvpn/clients/{{ hostvars[item].ansible_host }}.tgz"
+      dest: /etc/wireguard/
+  - name: unarhive certs 
+    ansible.builtin.unarchive:
+      remote_src: yes 
+      src: /etc/wireguard/{{ hostvars[item].ansible_host }}.tgz
+      dest: /etc/wireguard/
+  - name: unarhive
+    shell:
+      cmd: cp /etc/wireguard/{{ hostvars[item].ansible_host }}/{{ hostvars[item].ansible_host }}.conf /etc/wireguard/wg0.conf
+  - name: debug 
+    debug:
+      msg:  "sed -i 's#^[[Interface]#[Interface]\nPostUp = iptables -A INPUT -i {{ hostvars[item].ansible_default_ipv4.interface }} -p tcp --dport 22 -j ACCEPT; iptables -A INPUT -i {{ hostvars[item].ansible_default_ipv4.interface }} -p tcp --dport 51820 -j ACCEPT; iptables -A INPUT -s {{ hostvars[groups['vpn'][0]]['ansible_host'] }} -j ACCEPT; iptables -A INPUT -i {{ hostvars[item].ansible_default_ipv4.interface }} -j DROP#'"
+  - name: Conifure iptables
+    shell: 
+      #cmd: "sed -i 's#^[[Interface]#[Interface]\nPostUp = iptables -A INPUT -i {{ hostvars[item].ansible_default_ipv4.interface }} -p tcp --dport 22 -j ACCEPT; iptables -A INPUT -i {{ hostvars[item].ansible_default_ipv4.interface }} -p tcp --dport 51820 -j ACCEPT; iptables -A INPUT -s {{ hostvars[groups['vpn'][0]]['ansible_host'] }} -j ACCEPT; iptables -A INPUT -i {{ hostvars[item].ansible_default_ipv4.interface }} -j DROP#' /etc/wireguard/wg0.conf"
+      cmd: "iptables -A INPUT -i {{ hostvars[item].ansible_default_ipv4.interface }} -p tcp --dport 22 -j ACCEPT; iptables -A INPUT -i {{ hostvars[item].ansible_default_ipv4.interface }} -p tcp --dport 51820 -j ACCEPT; iptables -A INPUT -s {{ hostvars[groups['vpn'][0]]['ansible_host'] }} -j ACCEPT; iptables -A INPUT -i {{ hostvars[item].ansible_default_ipv4.interface }} -j DROP"
+          
+
+  - name: start
+    ansible.builtin.systemd:
+      name: wg-quick@wg0
+      state: restarted
+      enabled: yes
+  
+
+  

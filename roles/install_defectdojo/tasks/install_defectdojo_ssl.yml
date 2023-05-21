@@ -1,0 +1,63 @@
+- name: Git checkout
+  ansible.builtin.git:
+    repo: 'https://github.com/DefectDojo/django-DefectDojo.git'
+    dest: /home/{{ ansible_user }}/django-DefectDojo
+    force: true
+# - name: Get certs
+#   include_tasks: ./get_certs.yml
+#   when: defectdojo.ssl != False
+- name: Creates directory
+  file:
+    path: "{{ item }}"
+    state: directory
+  with_items:
+    - "/home/{{ ansible_user }}/django-DefectDojo/conf"
+- name: Create docker letscrypt
+  template: 
+       src: "{{ item.name }}"
+       dest: "{{ item.dest }}"
+  loop:
+     - { name: docker-compose.yml.j2 ,
+         dest: "/home/{{ ansible_user }}/django-DefectDojo/docker-compose.override.https.yml"
+       }
+     - { name: 'nginx.conf.j2' ,
+         dest: '/etc/nginx/conf.d/{{ defectdojo.domen }}.conf_ssl' 
+       }
+     - { name: 'conf.d.j2' ,
+         dest: '/etc/nginx/conf.d/{{ defectdojo.domen }}.conf' 
+       }
+
+
+- name: Build and Run
+  shell:
+    cmd: "{{ item }}"
+    chdir: /home/{{ ansible_user }}/django-DefectDojo
+  loop:
+    - rm -f docker-compose.override.yml
+    - ln -s docker-compose.override.https.yml docker-compose.override.yml
+    - ./dc-up-d.sh postgres-redis
+- name: Start certbot
+  shell:
+      cmd: "{{ item }}"
+  loop:
+      - nginx -t && nginx -s reload
+      - certbot --nginx -d {{ defectdojo.domen }} -m {{ defectdojo.email }} --non-interactive --agree-tos
+- name: re
+  shell:
+      cmd: "sed -i '1,13 s#}#include /etc/nginx/conf.d/{{ defectdojo.domen }}.conf_ssl; }#' /etc/nginx/conf.d/{{ defectdojo.domen }}.conf"
+- name: Pause for 5 minutes to build app cache
+  ansible.builtin.pause:
+    minutes: 3
+- name: curl for start init password
+  shell:
+    cmd: curl -k https://localhost/login?next=/
+    chdir: /home/{{ ansible_user }}/django-DefectDojo
+- name: Obtain admin creads
+  shell:
+    cmd: docker-compose logs initializer | grep "Admin password:"
+    chdir: /home/{{ ansible_user }}/django-DefectDojo
+  register: creds
+- name: Get creds
+  debug:
+    msg:
+      - "{{ creds.stdout }}"

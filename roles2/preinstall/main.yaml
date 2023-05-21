@@ -1,0 +1,36 @@
+
+- name: Install prerequisites
+  ansible.builtin.apt:
+  update_cache: true
+  pkg:
+          - curl
+          - gnupg
+          - ca-certificates
+          - lsb-release
+          - apt-transport-https
+          - software-properties-common
+          - jq
+          - docker.io
+          - docker-compose
+- name: Create new user
+  ansible.builtin.user:
+    name: "{{ server_username }}"
+    shell: /bin/bash
+    groups: sudo
+    append: true
+    password: "{{ user_password | password_hash('sha512') }}"
+- name: Create .ssh directory for new user
+  ansible.builtin.file:
+    path: /home/{{ server_username }}/.ssh
+    state: directory
+    owner: "{{ server_username }}"
+    group: "{{ server_username }}"
+    mode: '0700'
+- name: Copy authorized_keys for new user
+  ansible.builtin.copy:
+    remote_src: true
+    src: ../../authorized_keys
+    dest: /home/{{ server_username }}/.ssh/authorized_keys
+    owner: "{{ server_username }}"
+    group: "{{ server_username }}"
+    mode: '0600'

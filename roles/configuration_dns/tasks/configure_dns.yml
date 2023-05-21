@@ -1,0 +1,22 @@
+
+    - name: Creates directory
+      file:
+        path:  /home/{{ ansible_user }}/dns/bind9/bind/etc/master-zones
+        state: directory
+    - name: copy docker-compose
+      template:
+        src: "conf.j2"
+        dest: "/home/{{ ansible_user }}/dns/bind9/bind/etc/named.conf.local"
+      vars:
+        vpn_ips: "{{ hostvars[groups['vpn'][0]]['vpn_ips'] }}"
+    - name: copy zones
+      template: 
+        src: "local.zone.j2"
+        dest: "/home/{{ ansible_user }}/dns/bind9/bind/etc/master-zones/{{ item }}.local.zone"
+      loop: "{{ vpn_ips.keys() | list }}"  
+      vars:
+          vpn_ips: "{{ hostvars[groups['vpn'][0]]['vpn_ips'] }}"
+    - name: restart bind 
+      shell:
+        cmd: docker-compose restart
+        chdir: /home/{{ ansible_user }}/dns

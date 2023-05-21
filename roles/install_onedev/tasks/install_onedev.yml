@@ -1,29 +1,4 @@
 ---
-#tasks file for install redis-cluster
-- block: #Block for RedHat
-    - name: install docker
-      yum:
-        name: docker
-        state: latest
-      vars:
-        ansible_become: yes
-  when: ansible_os_family == "RedHat"
-- block: #Block for RedHat
-    - name: install docker
-      apt:
-        name: docker.io
-        state: latest
-        update_cache: yes
-      vars:
-        ansible_become: yes
-    - name: install docker
-      apt: 
-        name: docker-compose
-        state: latest
-        update_cache: yes
-      vars:
-        ansible_become: yes
-  when: ansible_os_family == "Debian"
 - name: Creates directory
   file:
     path: "{{ item }}"
@@ -42,11 +17,21 @@
           dest: '/home/{{ ansible_user }}/onedev/docker-compose.yaml' 
         }
       - { name: 'nginx.conf.j2' ,
-          dest: '/home/{{ ansible_user }}/onedev/conf/nginx.conf' 
+          dest: '/etc/nginx/conf.d/{{ onedev.domen }}.conf_ssl' 
+        }
+      - { name: 'conf.d.j2' ,
+          dest: '/etc/nginx/conf.d/{{ onedev.domen }}.conf' 
         }
 - name: Install OneDev
   shell: 
     cmd: docker-compose -f /home/{{ ansible_user }}/onedev/docker-compose.yaml up --build -d
+
+
+- name: Enable service httpd and ensure it is not masked
+  ansible.builtin.systemd:
+      name: nginx
+      enabled: yes  
+      state: restarted
 
 
 

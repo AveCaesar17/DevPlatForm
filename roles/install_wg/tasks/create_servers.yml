@@ -1,0 +1,38 @@
+- name: Copy scrypt
+  template:
+    src: create_users.sh.j2
+    dest: /etc/wireguard/create.sh
+- name: create conf
+  shell:  
+    cmd: "bash /etc/wireguard/create.sh server {{ item }} {{ hostvars[groups['vpn'][0]]['map_ip'][item] }}"
+  loop: "{{ ipaddr_list }}"
+- name: Create arhive
+  community.general.archive:
+    path: /etc/wireguard/clients/{{ item }}
+    dest: /etc/openvpn/clients/{{ item }}.tgz
+  loop: "{{ ipaddr_list }}"
+  vars: 
+    ansible_become: yes
+- name: Copy arhive to localhost 
+  fetch: 
+    src: /etc/openvpn/clients/{{ item }}.tgz
+    dest: ./clients_wg/
+  loop: "{{ ipaddr_list }}"
+  vars: 
+    ansible_become: yes
+
+
+# - name: Copy files to hosts  
+#   include_tasks: copy_certs.yml
+#   args:
+#     apply:
+#       delegate_to: "root@{{ item }}"
+#   loop: "{{ ipaddr_list | reject('search','{{ ipaddr.vpn }}') | list }}" 
+
+- name: Copy files to hosts  
+  include_tasks: copy_confs.yml
+  args:
+    apply:
+      delegate_to: "{{ item }}"
+  loop: "{{ groups.vpn_clients }}" 
+

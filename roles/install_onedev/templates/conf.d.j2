@@ -1,0 +1,9 @@
+server {
+    listen 80 ;
+    listen [::]:80 ;
+    root /var/www/html;
+    server_name {{ onedev.domen }};
+    location / {
+             proxy_pass http://172.29.2.10:6610/;
+     }
+}

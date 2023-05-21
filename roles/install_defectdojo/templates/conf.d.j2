@@ -1,0 +1,9 @@
+server {
+    listen 80 ;
+    listen [::]:80 ;
+    root /var/www/html;
+    server_name {{ defectdojo.domen }};
+    location / {
+             proxy_pass http://172.30.2.10:8080/;
+     }
+}

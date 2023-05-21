@@ -1,0 +1,5 @@
+
+
+- name: start 
+  include_tasks: "./configure_dns.yml"
+  when: inventory_hostname in groups['dns']

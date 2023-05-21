@@ -1,0 +1,91 @@
+#!/bin/bash
+
+umask 077
+
+nextip(){
+    IP=$1
+    IP_HEX=$(printf '%.2X%.2X%.2X%.2X\n' `echo $IP | sed -e 's/\./ /g'`)
+    NEXT_IP_HEX=$(printf %.8X `echo $(( 0x$IP_HEX + 1 ))`)
+    NEXT_IP=$(printf '%d.%d.%d.%d\n' `echo $NEXT_IP_HEX | sed -r 's/(..)/0x\1 /g'`)
+    echo "$NEXT_IP"
+}
+
+
+path_to_ips="/etc/wireguard/server/ips"
+
+serv4="10.8.0.1"
+dns={{ hostvars[groups['vpn'][0]]['vpn_ips']['dns'] }}
+client_role=${1?"Client role: admin, user, cslab-servers, dev-servers"}
+name=${2?"Client name (without spaces): example-name"}
+#ipv4=${3?"Client ip (without spaces): 10.8.0.2"}
+
+if [ "$client_role" = "server" ]
+then
+  ipv4=$(cat ${path_to_ips}/ips.txt | awk '{print $2}' | tail -1)
+  ipv4=$(nextip $ipv4)
+  ipv4=${3?"Client ip (without spaces): 10.8.0.2"}
+  echo "${name} ${ipv4}" >> ${path_to_ips}/ips.txt
+  mkdir -p /etc/wireguard/clients/${name}
+  wg genkey | tee /etc/wireguard/clients/${name}/${name}.key | wg pubkey > /etc/wireguard/clients/${name}/${name}.pub
+  wg genpsk > /etc/wireguard/clients/${name}/${name}.psk
+
+  echo "# $name" >> /etc/wireguard/wg0.conf
+  echo "[Peer]" >> /etc/wireguard/wg0.conf
+  echo "PublicKey = $(cat "/etc/wireguard/clients/${name}/${name}.pub")" >> /etc/wireguard/wg0.conf
+  echo "PresharedKey = $(cat "/etc/wireguard/clients/${name}/${name}.psk")" >> /etc/wireguard/wg0.conf
+  echo "AllowedIPs = $ipv4/32" >> /etc/wireguard/wg0.conf
+  echo "" >> /etc/wireguard/wg0.conf
+
+  echo "[Interface]" > "/etc/wireguard/clients/${name}/${name}.conf"
+  echo "Address = $ipv4/32" >> "/etc/wireguard/clients/${name}/${name}.conf"
+  echo "DNS = ${dns}" >> "/etc/wireguard/clients/${name}/${name}.conf" #Specifying DNS Server
+  echo "PrivateKey = $(cat "/etc/wireguard/clients/${name}/${name}.key")" >> "/etc/wireguard/clients/${name}/${name}.conf"
+  echo "ListenPort = 51820" >> "/etc/wireguard/clients/${name}/${name}.conf"
+  echo "" >> "/etc/wireguard/clients/${name}/${name}.conf"
+  echo "[Peer]" >> "/etc/wireguard/clients/${name}/${name}.conf"
+  echo "PublicKey = $(cat /etc/wireguard/server/publickey/server_public.key)" >> "/etc/wireguard/clients/${name}/${name}.conf"
+  echo "PresharedKey = $(cat "/etc/wireguard/clients/${name}/${name}.psk")" >> "/etc/wireguard/clients/${name}/${name}.conf"
+  echo "Endpoint = {{ ansible_host }}:51820" >> "/etc/wireguard/clients/${name}/${name}.conf"
+  # echo "AllowedIPs = ${serv4}/32, ${serv6}/128" >> "/etc/wireguard/clients/${name}.conf" # clients isolated from one another
+  echo "AllowedIPs = 10.8.0.0/16" >> "/etc/wireguard/clients/${name}/${name}.conf" # clients can see each other
+  echo "PersistentKeepalive = 25" >> "/etc/wireguard/clients/${name}/${name}.conf"
+elif [ "$client_role" = "client" ]
+then
+  ipv4=$(cat ${path_to_ips}/ips.txt | awk '{print $2}' | tail -1)
+  ipv4=$(nextip $ipv4)
+  echo "${name} ${ipv4}" >> ${path_to_ips}/ips.txt
+  mkdir -p /etc/wireguard/clients/${name}
+  wg genkey | tee /etc/wireguard/clients/${name}/${name}.key | wg pubkey > /etc/wireguard/clients/${name}/${name}.pub
+  wg genpsk > /etc/wireguard/clients/${name}/${name}.psk
+
+  echo "# $name" >> /etc/wireguard/wg0.conf
+  echo "[Peer]" >> /etc/wireguard/wg0.conf
+  echo "PublicKey = $(cat "/etc/wireguard/clients/${name}/${name}.pub")" >> /etc/wireguard/wg0.conf
+  echo "PresharedKey = $(cat "/etc/wireguard/clients/${name}/${name}.psk")" >> /etc/wireguard/wg0.conf
+  echo "AllowedIPs = $ipv4/32" >> /etc/wireguard/wg0.conf
+  echo "" >> /etc/wireguard/wg0.conf
+
+  echo "[Interface]" > "/etc/wireguard/clients/${name}/${name}.conf"
+  echo "Address = $ipv4/32" >> "/etc/wireguard/clients/${name}/${name}.conf"
+  echo "DNS = ${dns}" >> "/etc/wireguard/clients/${name}/${name}.conf" #Specifying DNS Server
+  echo "PrivateKey = $(cat "/etc/wireguard/clients/${name}/${name}.key")" >> "/etc/wireguard/clients/${name}/${name}.conf"
+  echo "ListenPort = 51820" >> "/etc/wireguard/clients/${name}/${name}.conf"
+  echo "" >> "/etc/wireguard/clients/${name}/${name}.conf"
+  echo "[Peer]" >> "/etc/wireguard/clients/${name}/${name}.conf"
+  echo "PublicKey = $(cat /etc/wireguard/server/publickey/server_public.key)" >> "/etc/wireguard/clients/${name}/${name}.conf"
+  echo "PresharedKey = $(cat "/etc/wireguard/clients/${name}/${name}.psk")" >> "/etc/wireguard/clients/${name}/${name}.conf"
+  echo "Endpoint = {{ ansible_host }}:51820" >> "/etc/wireguard/clients/${name}/${name}.conf"
+  # echo "AllowedIPs = ${serv4}/32, ${serv6}/128" >> "/etc/wireguard/clients/${name}.conf" # clients isolated from one another
+  echo "AllowedIPs = 10.8.0.0/16" >> "/etc/wireguard/clients/${name}/${name}.conf" # clients can see each other
+  echo "PersistentKeepalive = 25" >> "/etc/wireguard/clients/${name}/${name}.conf"
+
+fi
+
+# Print QR code scanable by the Wireguard mobile app on screen
+# qrencode -t ansiutf8 < "/etc/wireguard/clients/${name}.conf"
+
+wg syncconf wg0 <(wg-quick strip wg0)
+
+echo "Done! Client added with config: "
+echo ""
+cat /etc/wireguard/clients/${name}/${name}.conf

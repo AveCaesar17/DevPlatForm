@@ -1,0 +1,9 @@
+server {
+    listen 80 ;
+    listen [::]:80 ;
+    root /var/www/html;
+    server_name {{ vault.domen }};
+    location / {
+             proxy_pass http://172.29.1.10:{{ vault.port }}/;
+     }
+}

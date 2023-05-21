@@ -1,5 +1,5 @@
 
-- name: install docker
+- name: install 
   apt:
     name: "{{ item }}"
     state: latest
@@ -9,6 +9,15 @@
     - docker-compose
     - git
     - curl
+    - iptables
+    - nginx
+    - certbot
+    - python3-certbot-nginx
+    - openvpn
+    - easy-rsa
+    - openresolv
+    - wireguard
+    - resolvconf
   vars:
     ansible_become: yes
 
