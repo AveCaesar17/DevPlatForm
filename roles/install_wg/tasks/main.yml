@@ -1,18 +1,18 @@
 - block:  
-  # - name: add new key / value pairs to dict
-  #   set_fact:
-  #     ipaddr: "{{ ipaddr | combine({item.key: item.value}) }}"
-  #   with_items:
-  #   - { key: 'vpn', value: '{{ ansible_host }}' }
   - name: add new key / value pairs to dict
     set_fact:
-        ipaddr: "{{ ipaddr | combine({item.key: item.value}) }}"
+      ipaddr: "{{ ipaddr | combine({item.key: item.value}) }}"
     with_items:
-      - { key: '{{ defectdojo.domen }}', value: '77.232.132.99' }
-      - { key: '{{ vault.domen }}', value: '213.226.100.158' }
-      - { key: '{{ onedev.domen }}', value: '213.226.100.158' }
-      - { key: 'dns', value: '213.226.100.158' }
-      - { key: 'vpn', value: '77.232.132.99' }  
+    - { key: 'vpn', value: '{{ ansible_host }}' }
+  # - name: add new key / value pairs to dict
+  #   set_fact:
+  #       ipaddr: "{{ ipaddr | combine({item.key: item.value}) }}"
+  #   with_items:
+  #     - { key: '{{ defectdojo.domen }}', value: '77.232.132.99' }
+  #     - { key: '{{ vault.domen }}', value: '213.226.100.158' }
+  #     - { key: '{{ onedev.domen }}', value: '213.226.100.158' }
+  #     - { key: 'dns', value: '213.226.100.158' }
+  #     - { key: 'vpn', value: '77.232.132.99' }  
   - name: Creates directory
     file:
         path:  /etc/wireguard

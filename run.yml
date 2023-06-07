@@ -1,2 +1,0 @@
-- import_playbook: install_platform.yaml
-- import_playbook: configuration_platform.yml

@@ -1,0 +1,43 @@
+- name: Git checkout
+  ansible.builtin.git:
+    repo: 'https://github.com/prometheus/prometheus.git'
+    dest: /home/{{ ansible_user }}/prometheus
+    force: true
+- name: Creates directory
+  file:
+      path: "{{ item }}"
+      state: directory
+  with_items:
+      - "/home/{{ ansible_user }}/prometheus/grafana"
+      - "/home/{{ ansible_user }}/prometheus/prometheus"
+      - "/home/{{ ansible_user }}/prometheus/alertmanager"
+- name: Create docker letscrypt
+  template: 
+       src: "{{ item.name }}"
+       dest: "{{ item.dest }}"
+  loop:
+     - { name: docker-compose.yml.j2 ,
+         dest: "/home/{{ ansible_user }}/prometheus/docker-compose.yml"
+       }
+     - { name: 'conf.d.j2' ,
+         dest: '/etc/nginx/conf.d/{{ prometheus.domen }}.conf' 
+       }
+     - { 
+         name: 'config.monitoring.j2',
+         dest: '/home/{{ ansible_user }}/prometheus/grafana/config.monitoring'
+       }
+     - { name: 'prometheus.yml.j2',
+         dest: '/home/{{ ansible_user }}/prometheus/prometheus/prometheus.yml'
+       }
+     - { name: 'alerts.rules.j2',
+         dest: '/home/{{ ansible_user }}/prometheus/prometheus/alerts.rules'
+       }
+     - { name: 'alertmanager.conf.j2',
+         dest: '/home/{{ ansible_user }}/prometheus/alertmanager/config.yml'
+       } 
+- name: Build and Run
+  shell:
+    cmd: "{{ item }}"
+    chdir: /home/{{ ansible_user }}/prometheus
+  loop:
+    - docker-compose up --build -d

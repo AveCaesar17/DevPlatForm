@@ -1,0 +1,22 @@
+# - name: Run preinstall
+#   include_tasks: ../../preinstall/tasks/main.yml
+
+- block:
+    
+  - name: install defectdojo with certs 
+    include_tasks: install_defectdojo_ssl.yml
+    when: prometheus.ssl == true
+  - name: install defectdojo without certs
+    include_tasks: install_defectdojo.yml
+    when: prometheus.ssl != true
+  - name: add new key / value pairs to dict
+    set_fact:
+      ipaddr: "{{ ipaddr | combine({item.key: item.value}) }}"
+    with_items:
+    - { key: '{{ prometheus.domen }}', value: '{{ ansible_host }}' }
+    - { key: '{{ prometheus.exporter.domen }}', value: '{{ ansible_host }}' }
+    - { key: '{{ prometheus.grafana.domen }}', value: '{{ ansible_host }}' }
+    - { key: '{{ prometheus.alert.domen }}', value: '{{ ansible_host }}' }
+    delegate_to: "{{ groups['vpn'][0] }}"
+    run_once: true
+  when: inventory_hostname in groups['prometheus']

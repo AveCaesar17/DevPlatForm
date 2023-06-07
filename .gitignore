@@ -1,3 +1,5 @@
 global_vars.yml
 **/vars/main.yml
 clients_openvpn/
+**/.vscode
+**/clients_wg

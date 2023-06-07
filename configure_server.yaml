@@ -1,0 +1,17 @@
+- hosts: all
+  vars_files:
+    - ./global_vars.yml
+  vars: 
+    ipaddr:
+      
+  roles:
+  
+     #- "./preinstall"
+     #- "./install_vpn"
+     #- "./install_defectdojo"
+     #- "./install_onedev"
+     - "./install_vault"
+     - "./install_prometheus"
+     - "./install_dns"
+     - "./install_wg"  
+     - "./configuration_dns"

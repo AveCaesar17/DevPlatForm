@@ -1,20 +1,37 @@
 onedev:
+  ssl: false
   sock_docker: /var/run/docker.sock
-  #Данные для создания серта 
-  domen: #Домен для создания сертов для onedev
-  email: 
-  timezone: Europe/Moskow 
-  version_agent: latest # Версия агента 
-  # Логин и пароль администратора 
-  username: admin 
+  domen: onedev.ru 
+  email: example@mail.ru
+  timezone: Europe/Moskow
+  version_agent: latest 
+  username: admin
   password: admin
 vault:
   version: 0.10.3
   port: 8200
+  ssl: false
+  domen: vault.ru 
+  email: example@mail.ru
+  timezone: Europe/Moskow
 vpn:
   server_name: server
-  port: 1194
-  # Список пользователей для создания клиентских сертов
+  port: 51820
   client_users: 
-    - caesar25
-    - caesar26
+    - client1
+    - client2
+defectdojo:
+  ssl: false
+  domen: defectdojo.ru 
+  email: example@mail.ru
+  timezone: Europe/Moskow
+  port: 8080
+  ssl_port: 8443
+prometheus:
+  ssl: false
+  domen: prometheus.ru 
+  email: example@mail.ru
+  timezone: Europe/Moskow
+  admin_password: foobar
+dns: 
+  port: 54
