@@ -3,3 +3,4 @@ global_vars.yml
 clients_openvpn/
 **/.vscode
 **/clients_wg
+inventory
